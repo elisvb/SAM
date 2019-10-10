@@ -10,6 +10,7 @@
 ##' @param sim.condRE logical with default \code{TRUE}. Simulated observations will be conditional on estimated values of F and N, rather than also simulating F and N forward from their initial values.
 ##' @param ignore.parm.uncertainty option passed to TMB:::sdreport reported uncertainties will not include fixed effect parameter uncertainties
 ##' @param rel.tol option passed to stats:::nlminb sets the convergence criteria
+##' @param saveState option to save different final states (used to start projections, by default last two years)
 ##' @param ... extra arguments to MakeADFun
 ##' @return an object of class \code{sam}
 ##' @details The model configuration object \code{conf} is a list of different objects defining different parts of the model. The different elements of the list are: 
@@ -45,7 +46,7 @@
 ##' data(nscodConf)
 ##' data(nscodParameters)
 ##' fit <- sam.fit(nscodData, nscodConf, nscodParameters)
-sam.fit <- function(data, conf, parameters, newtonsteps=3, rm.unidentified=FALSE, run=TRUE, lower=getLowerBounds(parameters), upper=getUpperBounds(parameters), sim.condRE=TRUE, ignore.parm.uncertainty = FALSE, rel.tol=1e-10, ...){
+sam.fit <- function(data, conf, parameters, newtonsteps=3, rm.unidentified=FALSE, run=TRUE, lower=getLowerBounds(parameters), upper=getUpperBounds(parameters), sim.condRE=TRUE, ignore.parm.uncertainty = FALSE, rel.tol=1e-10, saveState = tail(data$years,2),...){
   if(length(conf$maxAgePlusGroup)==1){
     tmp <- conf$maxAgePlusGroup    
     conf$maxAgePlusGroup <- defcon(data)$maxAgePlusGroup
@@ -56,6 +57,7 @@ sam.fit <- function(data, conf, parameters, newtonsteps=3, rm.unidentified=FALSE
     warning("Initial values are not consistent, so running with default init values from defpar()")
     parameters<-definit
   }
+  conf$saveState <- saveState - min(data$years) + 1
   data<-clean.void.catches(data,conf)
   tmball <- c(data, conf, simFlag=as.numeric(sim.condRE))
   if(is.null(tmball$resFlag)){tmball$resFlag <- 0}  
@@ -99,14 +101,14 @@ sam.fit <- function(data, conf, parameters, newtonsteps=3, rm.unidentified=FALSE
   rep <- obj$report()
   sdrep <- sdreport(obj,opt$par, ignore.parm.uncertainty = ignore.parm.uncertainty)
 
-  # Last two states
-  idx <- c(which(names(sdrep$value)=="lastLogN"),which(names(sdrep$value)=="lastLogF"))
-  sdrep$estY <- sdrep$value[idx]
-  sdrep$covY <- sdrep$cov[idx,idx]
+  # Last states
+  idxN <- which(names(sdrep$value)=="lastLogN")
+  idxF <- which(names(sdrep$value)=="lastLogF")
+  idxState <- c(0:(length(idxN)-1) %/% nrow(parameters$logN),0:(length(idxF)-1) %/% nrow(parameters$logF))
 
-  idx <- c(which(names(sdrep$value)=="beforeLastLogN"),which(names(sdrep$value)=="beforeLastLogF"))
-  sdrep$estYm1 <- sdrep$value[idx]
-  sdrep$covYm1 <- sdrep$cov[idx,idx]
+  idx <- c(idxN,idxF)
+  sdrep[paste0('est',saveState)] <- split(sdrep$value[idx],idxState)
+  sdrep[paste0('cov',saveState)] <- lapply(0:(length(saveState)-1), function(x) sdrep$cov[idx[which(idxState==x)],idx[which(idxState==x)]])
 
   pl <- as.list(sdrep,"Est")
   plsd <- as.list(sdrep,"Std")

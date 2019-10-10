@@ -245,17 +245,10 @@ forecast <- function(fit, fscale=NULL, catchval=NULL, catchval.exact=NULL, fval=
   recpool<-rectab[rownames(rectab)%in%rec.years,1]
 
   # Get final state
-  if(year.base==max(fit$data$years)){
-    est <- fit$sdrep$estY
-    cov <- fit$sdrep$covY
-  }
-  if(year.base==(max(fit$data$years)-1)){  
-    est <- fit$sdrep$estYm1
-    cov <- fit$sdrep$covYm1
-  }
-  if(year.base<(max(fit$data$years)-1)){
-    stop("State not saved, so cannot proceed from this year")
-  }
+  if(!paste0('est',year.base) %in% names(fit$sdrep)) stop('State not saved, so cannot proceed from this year')
+  est <- fit$sdrep[[paste0('est',year.base)]]
+  cov <- fit$sdrep[[paste0('cov',year.base)]]
+
   if(deterministic)cov<-cov*0
   sim<-rmvnorm(nosim, mu=est, Sigma=cov)
 

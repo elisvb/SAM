@@ -347,17 +347,12 @@ Type nllObs(dataSet<Type> &dat, confSet &conf, paraSet<Type> &par, array<Type> &
   ADREPORT_F(logR,of);
   ADREPORT_F(logLagR,of);
 
-  int timeSteps=logF.dim[1];
-  
-  vector<Type> lastLogN = logN.col(timeSteps-1);
-  ADREPORT_F(lastLogN,of);
-  vector<Type> lastLogF = logF.col(timeSteps-1);
-  ADREPORT_F(lastLogF,of);  
-
-  vector<Type> beforeLastLogN = logN.col(timeSteps-2);
-  ADREPORT_F(beforeLastLogN,of);
-  vector<Type> beforeLastLogF = logF.col(timeSteps-2);
-  ADREPORT_F(beforeLastLogF,of);  
+  for(int i=0; i<conf.saveState.size(); ++i){
+    vector<Type> lastLogN = logN.col(conf.saveState(i)-1); 
+    vector<Type> lastLogF = logF.col(conf.saveState(i)-1); 
+    ADREPORT_F(lastLogN,of);
+    ADREPORT_F(lastLogF,of);
+  }
   
   return nll;
 }
